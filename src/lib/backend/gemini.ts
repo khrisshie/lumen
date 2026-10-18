@@ -15,7 +15,7 @@ import { BackendError, type Backend, type Task } from "./types";
 // read files but denies commands and edits in headless runs.
 
 export const AGY_BIN = process.env.AGY_BIN ?? "agy";
-const MODEL = process.env.LUMEN_GEMINI_MODEL; // unset = your Antigravity default model
+const MODEL = process.env.LUMEN_GEMINI_MODEL; // e.g. gemini-4-argon-high; unset = your Antigravity default
 const TMP = path.join(DATA, "tmp");
 
 function prompt(task: Task, pdf: string, image?: string): string {
@@ -55,8 +55,9 @@ async function run(task: Task, signal: AbortSignal, suffix = "", onText?: (text:
     const args = [
       "-p", prompt(task, pdf, image) + suffix,
       "--output-format", "stream-json",
-      "--effort", task.effort,
-      ...(MODEL ? ["--model", MODEL] : []),
+      // Antigravity model names include the effort (e.g. gemini-4-argon-high), and it
+      // rejects --effort next to them, so the task's effort applies only to the default model.
+      ...(MODEL ? ["--model", MODEL] : ["--effort", task.effort]),
     ];
 
     let result: Result | undefined;
