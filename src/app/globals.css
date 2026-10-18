@@ -1,0 +1,121 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f5f3ee;
+  --surface: #ffffff;
+  --sunken: #ebe8e1;
+  --ink: #1d1b22;
+  --ink-2: #57535f;
+  --ink-3: #8a8592;
+  --line: #e2ded5;
+  --accent: #5b47d6;
+  --accent-soft: #ece9fc;
+  --accent-ink: #3f2fb0;
+  --danger: #b4232f;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-serif);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+/* PDF text layer selection should read as a highlighter, not a block. */
+.react-pdf__Page .textLayer ::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.prose-lumen {
+  font-size: 0.9375rem;
+  line-height: 1.65;
+  color: var(--ink);
+}
+.prose-lumen > * + * { margin-top: 0.7em; }
+.prose-lumen h1, .prose-lumen h2, .prose-lumen h3 {
+  font-family: var(--font-serif), Georgia, serif;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-top: 1.1em;
+}
+.prose-lumen h1 { font-size: 1.2rem; }
+.prose-lumen h2 { font-size: 1.1rem; }
+.prose-lumen h3 { font-size: 1rem; }
+.prose-lumen ul { list-style: disc; padding-left: 1.25em; }
+.prose-lumen ol { list-style: decimal; padding-left: 1.4em; }
+.prose-lumen li + li { margin-top: 0.25em; }
+.prose-lumen strong { font-weight: 600; }
+.prose-lumen code {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.85em;
+  background: var(--sunken);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.prose-lumen pre { background: var(--sunken); padding: 0.75em; border-radius: 8px; overflow-x: auto; }
+.prose-lumen pre code { background: none; padding: 0; }
+.prose-lumen blockquote { border-left: 3px solid var(--line); padding-left: 0.8em; color: var(--ink-2); }
+.prose-lumen table { width: 100%; border-collapse: collapse; font-size: 0.85em; display: block; overflow-x: auto; }
+.prose-lumen th, .prose-lumen td { border: 1px solid var(--line); padding: 0.3em 0.5em; text-align: left; }
+.prose-lumen th { background: var(--sunken); font-weight: 600; }
+.prose-lumen a { color: var(--accent-ink); text-decoration: underline; }
+.prose-lumen .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.2em 0; }
+
+.caret::after,
+.is-streaming > :last-child:not(ul):not(ol):not(table)::after,
+.is-streaming > :is(ul, ol) > li:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--accent);
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink { to { opacity: 0; } }
+
+.shimmer {
+  background: linear-gradient(90deg, var(--sunken) 0%, #f4f2ec 50%, var(--sunken) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .caret::after, .is-streaming *::after, .shimmer { animation: none; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex h-9 items-center gap-1.5 rounded-lg bg-accent px-3.5 text-sm font-medium text-white transition hover:bg-accent-ink disabled:opacity-60;
+  }
+  .btn-secondary {
+    @apply inline-flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-3 text-sm font-medium text-ink transition hover:border-accent/50;
+  }
+  .btn-ghost {
+    @apply inline-flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-ink-2 transition hover:bg-sunken hover:text-ink;
+  }
+  .icon-btn {
+    @apply grid size-8 place-items-center rounded-lg text-ink-2 transition hover:bg-sunken hover:text-ink disabled:opacity-40;
+  }
+}
