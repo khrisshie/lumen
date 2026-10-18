@@ -3,6 +3,23 @@
 A PDF reader for research papers with an AI colleague built in.
 Open a paper, select anything, and ask, without copying text into a chatbot.
 
+![Select a sentence and Lumen explains it in context, next to the paper](docs/explain.jpg)
+
+## See it in action
+
+| | |
+| --- | --- |
+| **Translate** any passage (here into Traditional Chinese), keeping the technical terms | **Explain a figure**: drag a box over a figure, table or equation |
+| ![Translate](docs/translate.jpg) | ![Figure explanation](docs/figure.jpg) |
+| **One-click summary**: TL;DR, problem, method, results and limitations | **Auto highlight** underlines the key claims, methods and results |
+| ![Summary](docs/summary.jpg) | ![Auto highlight](docs/notes.jpg) |
+
+Your papers stay in your browser, and Lumen uses your own Claude Code, Codex or Gemini login. No API key needed.
+
+![Library](docs/library.jpg)
+
+<sub>Screenshots: Lumen with Gemini, reading <i>Attention Is All You Need</i> (Vaswani et al., 2017).</sub>
+
 ## Setup (3 steps)
 
 1. **Install [Node.js](https://nodejs.org)** (the LTS version).
