@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { StickyNote } from "lucide-react";
 import { Document, Page, pdfjs } from "react-pdf";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import "react-pdf/dist/Page/AnnotationLayer.css";
@@ -49,12 +50,14 @@ type Props = {
   onPageChange: (page: number) => void;
   onSelection: (selection: Selection | null) => void;
   onCapture: (page: number, region: Omit<Rect, "page">) => void;
+  /** A click (not a text selection) landed on one of the user's highlights. */
+  onNoteClick: (id: string, anchor: { x: number; y: number }) => void;
 };
 
 const GUTTER = 48;
 
 export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
-  { file, zoom, notes, autoMarks, captureMode, flashId, onLoad, onPageChange, onSelection, onCapture },
+  { file, zoom, notes, autoMarks, captureMode, flashId, onLoad, onPageChange, onSelection, onCapture, onNoteClick },
   ref,
 ) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -145,13 +148,38 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
     },
   }));
 
+  /** The highlight under a point, if any; the newest wins where highlights overlap. */
+  const noteAt = useCallback(
+    (x: number, y: number) => {
+      for (const note of [...notes].reverse()) {
+        for (const r of note.rects) {
+          const box = slots.current.get(r.page)?.getBoundingClientRect();
+          if (!box) continue;
+          const left = box.left + r.x * box.width;
+          const top = box.top + r.y * box.height;
+          if (x >= left && x <= left + r.w * box.width && y >= top && y <= top + r.h * box.height) {
+            return { note, bottom: top + r.h * box.height };
+          }
+        }
+      }
+      return null;
+    },
+    [notes],
+  );
+
   // Text selection → page-relative rects for highlights + an anchor for the menu.
-  const readSelection = useCallback(() => {
+  // A plain click on a highlight opens it instead, so selecting text over highlights still works.
+  const readSelection = useCallback((click: { x: number; y: number }) => {
     const sel = window.getSelection();
     const root = scroller.current;
-    if (!sel || sel.isCollapsed || !root || !root.contains(sel.anchorNode)) return onSelection(null);
-    const text = sel.toString().replace(/\s+/g, " ").trim();
-    if (text.length < 2) return onSelection(null);
+    const text = sel && !sel.isCollapsed ? sel.toString().replace(/\s+/g, " ").trim() : "";
+    if (text.length < 2) {
+      onSelection(null);
+      const hit = noteAt(click.x, click.y);
+      if (hit) onNoteClick(hit.note.id, { x: click.x, y: hit.bottom });
+      return;
+    }
+    if (!sel || !root || !root.contains(sel.anchorNode)) return onSelection(null);
     const range = sel.getRangeAt(0);
     const pages = [...slots.current.entries()].map(([n, el]) => ({ n, box: el.getBoundingClientRect() }));
     const rects: Rect[] = [];
@@ -172,7 +200,7 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
     if (rects.length === 0) return onSelection(null);
     const box = range.getBoundingClientRect();
     onSelection({ text, page: rects[0].page, rects, anchor: { x: box.left + box.width / 2, y: box.top, bottom: box.bottom } });
-  }, [onSelection]);
+  }, [onSelection, onNoteClick, noteAt]);
 
   const marksByPage = useMemo(() => {
     const byPage = new Map<number, { notes: { note: Note; rect: Rect }[]; auto: { mark: AutoMark; rect: Rect }[] }>();
@@ -188,7 +216,11 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
   return (
     <div
       ref={scroller}
-      onMouseUp={() => setTimeout(readSelection, 0)}
+      onMouseUp={(e) => {
+        if (captureMode) return;
+        const click = { x: e.clientX, y: e.clientY };
+        setTimeout(() => readSelection(click), 0);
+      }}
       onScroll={() => onSelection(null)}
       className="relative h-full overflow-auto bg-sunken"
     >
@@ -240,6 +272,25 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
                         style={{ ...place(rect), background: NOTE_COLORS[note.color] }}
                       />
                     ))}
+                    {marks.notes
+                      .filter(({ note, rect }) => note.note.trim() && rect === note.rects.findLast((r) => r.page === n))
+                      .map(({ note, rect }) => (
+                        // A marker after the last line of a highlight that has a note.
+                        <button
+                          key={`${note.id}-marker`}
+                          aria-label="Open note"
+                          title={note.note}
+                          onClick={(e) => {
+                            const box = e.currentTarget.getBoundingClientRect();
+                            onNoteClick(note.id, { x: box.left + box.width / 2, y: box.bottom });
+                          }}
+                          onMouseUp={(e) => e.stopPropagation()}
+                          className="pointer-events-auto absolute grid size-5 -translate-y-1/2 place-items-center rounded-full bg-accent text-white shadow-sm ring-2 ring-white hover:scale-110"
+                          style={{ left: `calc(${(rect.x + rect.w) * 100}% + 4px)`, top: `${(rect.y + rect.h / 2) * 100}%` }}
+                        >
+                          <StickyNote size={11} strokeWidth={2.5} />
+                        </button>
+                      ))}
                     {marks.auto.map(({ mark, rect }, j) => (
                       <div
                         key={`${mark.id}-${j}`}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Languages, MessageSquarePlus, Sparkles } from "lucide-react";
+import { Copy, Languages, MessageSquarePlus, Sparkles, StickyNote } from "lucide-react";
 import type { HighlightColor } from "@/lib/store";
 import { NOTE_COLORS, type Selection } from "./PdfView";
 
@@ -10,11 +10,13 @@ type Props = {
   onTranslate: () => void;
   onAsk: () => void;
   onHighlight: (color: HighlightColor) => void;
+  /** Highlight the selection and write a note on it. */
+  onNote: () => void;
 };
 
-const MENU_W = 360;
+const MENU_W = 430;
 
-export function SelectionMenu({ selection, onExplain, onTranslate, onAsk, onHighlight }: Props) {
+export function SelectionMenu({ selection, onExplain, onTranslate, onAsk, onHighlight, onNote }: Props) {
   const { x, y, bottom } = selection.anchor;
   const above = y > 70;
   const left = Math.min(Math.max(8, x - MENU_W / 2), window.innerWidth - MENU_W - 8);
@@ -35,6 +37,9 @@ export function SelectionMenu({ selection, onExplain, onTranslate, onAsk, onHigh
       </MenuButton>
       <MenuButton onClick={onAsk}>
         <MessageSquarePlus size={15} /> Ask
+      </MenuButton>
+      <MenuButton onClick={onNote}>
+        <StickyNote size={15} /> Note
       </MenuButton>
       <span className="mx-1 h-5 w-px bg-line" />
       {(Object.keys(NOTE_COLORS) as HighlightColor[]).map((c) => (

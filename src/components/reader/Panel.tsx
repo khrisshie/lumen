@@ -500,11 +500,11 @@ export function NotesTab({
           )}
         </div>
         {notes.length === 0 ? (
-          <p className="text-sm text-ink-2">Select text in the paper and pick a color to highlight it.</p>
+          <p className="text-sm text-ink-2">Select text in the paper and pick a color to highlight it, or click <b className="font-medium text-ink">Note</b> to write a note on it. Click a highlight to edit or remove it; ⌘Z undoes.</p>
         ) : (
           <ul className="space-y-2">
             {notes.map((n) => (
-              <NoteItem key={n.id} note={n} onJump={onJump} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
+              <NoteItem key={`${n.id}:${n.note}`} note={n} onJump={onJump} onUpdate={onUpdateNote} onDelete={onDeleteNote} />
             ))}
           </ul>
         )}

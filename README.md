@@ -29,7 +29,7 @@ Lumen opens in a browser window at http://localhost:3939. To stop it, quit Lumen
 | **Summary** | Structured summary: TL;DR, problem, contributions, method, results, limitations, discussion questions. |
 | **Chat** | Multi-turn chat grounded in the paper; *Ask* or *Follow up in chat* attaches the passage you're discussing. |
 | **Auto highlight** | Claude picks key sentences (claim / method / result / limitation); they're located in the PDF text and underlined. |
-| **Markup & notes** | Four highlight colors, notes per highlight, jump-to, and Markdown export. |
+| **Markup & notes** | Four highlight colors; *Note* writes a note on the selected text (marked on the page). Click a highlight to recolor, annotate or remove it; ⌘Z / ⇧⌘Z undo and redo. Jump-to and Markdown export. |
 | **Library** | Papers, notes, chat and summaries are stored in the browser (IndexedDB). |
 
 ## Run from source (developers)

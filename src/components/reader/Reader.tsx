@@ -8,8 +8,9 @@ import { ask, fetchHighlights, fetchSummary } from "@/lib/api";
 import { captureRegion } from "@/lib/capture";
 import { LANGUAGES, setLanguage, useLanguage } from "@/lib/lang";
 import { locateQuote } from "@/lib/locate";
-import { getPaper, getPdf, savePaper, type HighlightColor, type Paper, type Rect } from "@/lib/store";
+import { getPaper, getPdf, savePaper, type HighlightColor, type Note, type Paper, type Rect } from "@/lib/store";
 import type { AssistMode, ChatTurn } from "@/lib/types";
+import { NotePopover } from "./NotePopover";
 import { AssistTab, ChatTab, NotesTab, SummaryTab, Tabs, type AssistCard, type Tab } from "./Panel";
 import { PdfView, type AutoMark, type PdfViewHandle, type Selection } from "./PdfView";
 import { SelectionMenu } from "./SelectionMenu";
@@ -61,6 +62,10 @@ export function Reader({ id }: { id: string }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [captureMode, setCaptureMode] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
+  const [openNote, setOpenNote] = useState<{ id: string; anchor: { x: number; y: number }; focusNote: boolean } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  // Undo/redo history of the user's highlights and notes.
+  const history = useRef<{ past: Note[][]; future: Note[][] }>({ past: [], future: [] });
 
   const [cards, setCards] = useState<AssistCard[]>([]);
   const cardAborts = useRef(new Map<string, AbortController>());
@@ -83,6 +88,38 @@ export function Reader({ id }: { id: string }) {
     setPaper(next);
     void savePaper(next);
   }, []);
+
+  const showToast = useCallback((text: string) => {
+    setToast(text);
+    setTimeout(() => setToast((cur) => (cur === text ? null : cur)), 2500);
+  }, []);
+
+  /** Change the user's highlights, recording the previous state for undo. */
+  const changeNotes = useCallback(
+    (fn: (notes: Note[]) => Note[]) => {
+      const before = paperRef.current?.notes;
+      if (!before) return;
+      history.current.past.push(before);
+      if (history.current.past.length > 100) history.current.past.shift();
+      history.current.future = [];
+      update((p) => ({ ...p, notes: fn(p.notes) }));
+    },
+    [update],
+  );
+
+  const stepHistory = useCallback(
+    (direction: "undo" | "redo") => {
+      const current = paperRef.current?.notes;
+      const { past, future } = history.current;
+      const target = direction === "undo" ? past.pop() : future.pop();
+      if (!current || !target) return;
+      (direction === "undo" ? future : past).push(current);
+      setOpenNote(null);
+      update((p) => ({ ...p, notes: target }));
+      showToast(direction === "undo" ? "Undone" : "Redone");
+    },
+    [update, showToast],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -115,10 +152,21 @@ export function Reader({ id }: { id: string }) {
         setCaptureMode(false);
         setSelection(null);
       }
+      // ⌘Z / ⇧⌘Z (Ctrl on Windows) undo and redo highlight changes, except while typing.
+      const target = e.target as HTMLElement;
+      const typing = target.closest("input, textarea, select, [contenteditable]");
+      if (!typing && (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        stepHistory(e.shiftKey ? "redo" : "undo");
+      }
+      if (!typing && e.ctrlKey && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        stepHistory("redo");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [stepHistory]);
 
   const onLoad = useCallback(
     (pdf: PDFDocumentProxy) => {
@@ -275,7 +323,7 @@ export function Reader({ id }: { id: string }) {
 
   /* ---------------------------------- Notes -------------------------------- */
 
-  const addHighlight = (color: HighlightColor) => {
+  const addHighlight = (color: HighlightColor, withNote = false) => {
     if (!selection) return;
     const note = {
       id: crypto.randomUUID(),
@@ -286,9 +334,16 @@ export function Reader({ id }: { id: string }) {
       note: "",
       createdAt: Date.now(),
     };
-    update((p) => ({ ...p, notes: [...p.notes, note] }));
+    changeNotes((notes) => [...notes, note]);
     window.getSelection()?.removeAllRanges();
+    if (withNote) setOpenNote({ id: note.id, anchor: { x: selection.anchor.x, y: selection.anchor.bottom }, focusNote: true });
     setSelection(null);
+  };
+
+  const removeNote = (noteId: string) => {
+    changeNotes((notes) => notes.filter((n) => n.id !== noteId));
+    setOpenNote(null);
+    showToast("Highlight removed · ⌘Z to undo");
   };
 
   const exportNotes = () => {
@@ -421,6 +476,7 @@ export function Reader({ id }: { id: string }) {
               onPageChange={setPage}
               onSelection={setSelection}
               onCapture={onCapture}
+              onNoteClick={(noteId, anchor) => setOpenNote({ id: noteId, anchor, focusNote: false })}
             />
           )}
         </div>
@@ -477,9 +533,9 @@ export function Reader({ id }: { id: string }) {
                   onGenerateAuto={generateAuto}
                   onJump={jump}
                   onUpdateNote={(noteId, text) =>
-                    update((p) => ({ ...p, notes: p.notes.map((n) => (n.id === noteId ? { ...n, note: text } : n)) }))
+                    changeNotes((notes) => notes.map((n) => (n.id === noteId ? { ...n, note: text } : n)))
                   }
-                  onDeleteNote={(noteId) => update((p) => ({ ...p, notes: p.notes.filter((n) => n.id !== noteId) }))}
+                  onDeleteNote={removeNote}
                   onExport={exportNotes}
                 />
               )}
@@ -506,7 +562,27 @@ export function Reader({ id }: { id: string }) {
             setSelection(null);
           }}
           onHighlight={addHighlight}
+          onNote={() => addHighlight("yellow", true)}
         />
+      )}
+
+      {openNote && paper.notes.some((n) => n.id === openNote.id) && (
+        <NotePopover
+          key={openNote.id}
+          note={paper.notes.find((n) => n.id === openNote.id)!}
+          anchor={openNote.anchor}
+          focusNote={openNote.focusNote}
+          onColor={(color) => changeNotes((notes) => notes.map((n) => (n.id === openNote.id ? { ...n, color } : n)))}
+          onNote={(text) => changeNotes((notes) => notes.map((n) => (n.id === openNote.id ? { ...n, note: text } : n)))}
+          onRemove={() => removeNote(openNote.id)}
+          onClose={() => setOpenNote(null)}
+        />
+      )}
+
+      {toast && (
+        <div role="status" className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-lg bg-ink px-3 py-2 text-sm text-paper shadow-lg">
+          {toast}
+        </div>
       )}
     </div>
   );
