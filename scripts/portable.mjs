@@ -157,6 +157,8 @@ if (process.platform === "darwin") {
   }
   run(`codesign --force --deep -s - "${macApp}"`, { stdio: "ignore" });
   run(`ditto -c -k --keepParent "${macApp}" "${macZip}"`);
+  // Keep only the zip: a loose Lumen.app here shows up in Launchpad and Spotlight next to the real one.
+  rmSync(macApp, { recursive: true, force: true });
 }
 
 console.log(`\nDone:\n  ${out}\n  ${zip}${process.platform === "darwin" ? `\n  ${macZip}` : ""}`);
