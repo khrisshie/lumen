@@ -9,11 +9,14 @@ Open a paper, select anything, and ask, without copying text into a chatbot.
 2. **Install Claude Code or Codex and log in once** in a terminal. Lumen uses your own account.
    - Claude Code ([install](https://claude.com/claude-code)): run `claude`, then type `/login`
    - Codex ([install](https://developers.openai.com/codex)): run `codex login`
-3. **Download [Lumen.zip](https://github.com/khrisshie/lumen/releases/latest/download/Lumen.zip)**, unzip it, and double-click:
-   - Mac: `Start Lumen (Mac).command`. If macOS blocks it, right-click it, choose **Open**, then **Open** again.
-   - Windows: `Start Lumen (Windows).bat`
+3. **Download Lumen and open it:**
+   - **Mac:** download [Lumen-mac.zip](https://github.com/khrisshie/lumen/releases/latest/download/Lumen-mac.zip),
+     unzip it, and drag **Lumen.app** into your Applications folder. Open it; drag it to the Dock to keep it there.
+     If macOS says it can't verify Lumen, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
+   - **Windows:** download [Lumen.zip](https://github.com/khrisshie/lumen/releases/latest/download/Lumen.zip),
+     unzip it, and double-click `Start Lumen (Windows).bat`.
 
-Lumen opens in your browser at http://localhost:3939. Close the terminal window to stop it.
+Lumen opens in a browser window at http://localhost:3939. To stop it, quit Lumen in the Dock (Mac) or close the terminal window (Windows).
 
 ## Features
 
@@ -41,7 +44,7 @@ To use the Claude API instead, put `ANTHROPIC_API_KEY` in `.env.local` (see `.en
 ## Share it (portable copy)
 
 ```bash
-npm run portable             # → dist/Lumen/ and dist/Lumen.zip
+npm run portable             # → dist/Lumen.zip (Mac + Windows scripts) and, on a Mac, dist/Lumen-mac.zip (Lumen.app)
 ```
 
 Send `dist/Lumen.zip`. Each person unzips it and double-clicks **Start Lumen (Mac).command** or
@@ -50,6 +53,8 @@ Send `dist/Lumen.zip`. Each person unzips it and double-clicks **Start Lumen (Ma
 
 - The build goes to `.next-pack/` with `output: "standalone"`; your `.next`, dev server and `~/.lumen` aren't touched.
 - The portable copy listens on `127.0.0.1:3939` only and keeps its PDFs in its own `data/` folder.
+- `Lumen.app` (`scripts/mac/Lumen.applescript`) bundles the same server, keeps PDFs in `~/Library/Application Support/Lumen`,
+  opens Lumen in a new window of the default browser, and stops the server when you quit it.
 
 ## Backends
 

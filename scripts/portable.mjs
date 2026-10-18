@@ -1,4 +1,5 @@
-// Builds a portable copy of Lumen to share: dist/Lumen/ and dist/Lumen.zip.
+// Builds a portable copy of Lumen to share: dist/Lumen/ and dist/Lumen.zip
+// (start scripts for Mac and Windows), plus, on a Mac, dist/Lumen-mac.zip (Lumen.app).
 //
 // The build goes to .next-pack (see next.config.ts), so your own `.next`,
 // dev server and ~/.lumen are left alone. The portable copy keeps its papers in
@@ -11,6 +12,8 @@ const root = path.resolve(import.meta.dirname, "..");
 const build = path.join(root, ".next-pack");
 const out = path.join(root, "dist", "Lumen");
 const zip = path.join(root, "dist", "Lumen.zip");
+const macApp = path.join(root, "dist", "Lumen.app");
+const macZip = path.join(root, "dist", "Lumen-mac.zip");
 
 const run = (cmd, opts = {}) => execSync(cmd, { cwd: root, stdio: "inherit", ...opts });
 
@@ -29,6 +32,8 @@ try {
 
 rmSync(out, { recursive: true, force: true });
 rmSync(zip, { force: true });
+rmSync(macApp, { recursive: true, force: true });
+rmSync(macZip, { force: true });
 
 // Standalone server + the static assets and public files it doesn't copy itself.
 cpSync(path.join(build, "standalone"), path.join(out, "app"), { recursive: true });
@@ -124,4 +129,31 @@ Notes:
 
 console.log("Zipping…");
 run(`zip -qry "${zip}" Lumen -x "Lumen/data/*"`, { cwd: path.dirname(out) });
-console.log(`\nDone:\n  ${out}\n  ${zip}`);
+
+// Lumen.app: an AppleScript launcher with the server inside. Its papers go to
+// ~/Library/Application Support/Lumen. Needs macOS tools (osacompile, codesign).
+if (process.platform === "darwin") {
+  console.log("Building Lumen.app…");
+  const mac = path.join(root, "scripts", "mac");
+  const contents = path.join(macApp, "Contents");
+  const plist = path.join(contents, "Info.plist");
+  run(`osacompile -s -o "${macApp}" "${path.join(mac, "Lumen.applescript")}"`);
+  cpSync(path.join(out, "app"), path.join(contents, "Resources", "app"), { recursive: true });
+  cpSync(path.join(mac, "Lumen.icns"), path.join(contents, "Resources", "applet.icns"));
+  rmSync(path.join(contents, "Resources", "Assets.car"), { force: true }); // would override the icon
+  for (const cmd of [
+    "Delete :CFBundleIconName",
+    "Add :CFBundleIdentifier string io.lumen.app",
+    "Add :NSAppleEventsUsageDescription string Lumen opens itself in a Safari window.",
+  ]) {
+    try {
+      execSync(`/usr/libexec/PlistBuddy -c "${cmd}" "${plist}"`, { stdio: "ignore" });
+    } catch {
+      // The key is already absent (Delete) or present (Add).
+    }
+  }
+  run(`codesign --force --deep -s - "${macApp}"`, { stdio: "ignore" });
+  run(`ditto -c -k --keepParent "${macApp}" "${macZip}"`);
+}
+
+console.log(`\nDone:\n  ${out}\n  ${zip}${process.platform === "darwin" ? `\n  ${macZip}` : ""}`);
