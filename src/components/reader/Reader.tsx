@@ -17,6 +17,7 @@ import { SelectionMenu } from "./SelectionMenu";
 
 const ZOOMS = [0.6, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
 
+const ZOOM_KEY = "lumen.zoom";
 const PANEL_KEY = "lumen.panelWidth";
 const PANEL_DEFAULT = 420;
 const PANEL_MIN = 320;
@@ -37,7 +38,23 @@ export function Reader({ id }: { id: string }) {
   const pdfRef = useRef<PDFDocumentProxy | null>(null);
   const view = useRef<PdfViewHandle>(null);
 
-  const [zoom, setZoom] = useState(1);
+  const [zoom, setZoomState] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem(ZOOM_KEY));
+      return ZOOMS.includes(saved) ? saved : 1;
+    } catch {
+      return 1;
+    }
+  });
+  // Remembered per browser, so every paper opens at the zoom you last used.
+  const setZoom = (next: number) => {
+    setZoomState(next);
+    try {
+      localStorage.setItem(ZOOM_KEY, String(next));
+    } catch {
+      // Storage blocked; the zoom just won't persist.
+    }
+  };
   const [page, setPage] = useState(1);
   const [numPages, setNumPages] = useState(0);
   const [tab, setTab] = useState<Tab>("assist");
