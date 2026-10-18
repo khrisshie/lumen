@@ -342,6 +342,15 @@ export function Reader({ id }: { id: string }) {
 
   const addHighlight = (color: HighlightColor, withNote = false) => {
     if (!selection) return;
+    // Highlighting the same text again recolors it instead of stacking a second highlight.
+    const same = paper?.notes.find((n) => n.page === selection.page && n.text === selection.text);
+    if (same) {
+      if (same.color !== color) changeNotes((notes) => notes.map((n) => (n.id === same.id ? { ...n, color } : n)));
+      window.getSelection()?.removeAllRanges();
+      if (withNote) setOpenNote({ id: same.id, anchor: { x: selection.anchor.x, y: selection.anchor.bottom }, focusNote: true });
+      setSelection(null);
+      return;
+    }
     const note = {
       id: crypto.randomUUID(),
       page: selection.page,

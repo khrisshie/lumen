@@ -19,6 +19,11 @@ export const NOTE_COLORS: Record<HighlightColor, string> = {
   pink: "rgba(244, 114, 182, 0.35)",
 };
 
+/** Highlights are drawn opaque inside one translucent layer, so overlaps don't get darker. */
+const NOTE_SOLID = Object.fromEntries(
+  Object.entries(NOTE_COLORS).map(([c, v]) => [c, v.replace(/[\d.]+\)$/, "1)")]),
+) as Record<HighlightColor, string>;
+
 export const KIND_COLORS: Record<HighlightKind, string> = {
   claim: "#7c5cff",
   method: "#2f80ed",
@@ -265,13 +270,20 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
                 )}
                 {marks && (
                   <div className="pointer-events-none absolute inset-0 z-[3]">
-                    {marks.notes.map(({ note, rect }, j) => (
-                      <div
-                        key={`${note.id}-${j}`}
-                        className={`absolute rounded-[2px] mix-blend-multiply transition ${flashId === note.id ? "ring-2 ring-accent" : ""}`}
-                        style={{ ...place(rect), background: NOTE_COLORS[note.color] }}
-                      />
-                    ))}
+                    <div className="absolute inset-0 opacity-[0.36] mix-blend-multiply">
+                      {marks.notes.map(({ note, rect }, j) => (
+                        <div
+                          key={`${note.id}-${j}`}
+                          className="absolute rounded-[2px]"
+                          style={{ ...place(rect), background: NOTE_SOLID[note.color] }}
+                        />
+                      ))}
+                    </div>
+                    {marks.notes
+                      .filter(({ note }) => flashId === note.id)
+                      .map(({ note, rect }, j) => (
+                        <div key={`${note.id}-flash-${j}`} className="absolute rounded-[2px] ring-2 ring-accent" style={place(rect)} />
+                      ))}
                     {marks.notes
                       .filter(({ note, rect }) => note.note.trim() && rect === note.rects.findLast((r) => r.page === n))
                       .map(({ note, rect }) => (
