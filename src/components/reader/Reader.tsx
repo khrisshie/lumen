@@ -16,6 +16,15 @@ import { SelectionMenu } from "./SelectionMenu";
 
 const ZOOMS = [0.6, 0.75, 0.9, 1, 1.15, 1.3, 1.5, 1.75, 2];
 
+const PANEL_KEY = "lumen.panelWidth";
+const PANEL_DEFAULT = 420;
+const PANEL_MIN = 320;
+/** Keep at least this much room for the PDF. */
+const PDF_MIN = 360;
+
+const clampPanel = (w: number) =>
+  Math.round(Math.max(PANEL_MIN, Math.min(w, (typeof window === "undefined" ? 1600 : window.innerWidth) - PDF_MIN)));
+
 const errorText = (e: unknown) => (e instanceof Error ? e.message : "Something went wrong.");
 const isAbort = (e: unknown) => e instanceof DOMException && e.name === "AbortError";
 
@@ -32,6 +41,23 @@ export function Reader({ id }: { id: string }) {
   const [numPages, setNumPages] = useState(0);
   const [tab, setTab] = useState<Tab>("assist");
   const [panelOpen, setPanelOpen] = useState(true);
+  const [panelWidth, setPanelWidth] = useState(() => {
+    try {
+      const saved = Number(localStorage.getItem(PANEL_KEY));
+      return saved ? clampPanel(saved) : PANEL_DEFAULT;
+    } catch {
+      return PANEL_DEFAULT;
+    }
+  });
+  const resizePanel = useCallback((w: number) => {
+    const next = clampPanel(w);
+    setPanelWidth(next);
+    try {
+      localStorage.setItem(PANEL_KEY, String(next));
+    } catch {
+      // Storage blocked; the width just won't persist.
+    }
+  }, []);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [captureMode, setCaptureMode] = useState(false);
   const [flashId, setFlashId] = useState<string | null>(null);
@@ -400,7 +426,11 @@ export function Reader({ id }: { id: string }) {
         </div>
 
         {panelOpen && (
-          <aside className="fixed inset-x-0 top-14 bottom-0 z-40 flex flex-col border-l border-line bg-paper md:static md:w-[420px] md:shrink-0">
+          <aside
+            style={{ "--panel-w": `${panelWidth}px` } as React.CSSProperties}
+            className="fixed inset-x-0 top-14 bottom-0 z-40 flex flex-col border-l border-line bg-paper md:relative md:inset-auto md:w-(--panel-w) md:shrink-0"
+          >
+            <ResizeHandle width={panelWidth} onResize={resizePanel} />
             <Tabs
               tab={tab}
               onTab={setTab}
@@ -499,5 +529,40 @@ function PageInput({ page, numPages, onGo }: { page: number; numPages: number; o
       onKeyDown={(e) => e.key === "Enter" && commit()}
       className="w-9 rounded-md border border-line bg-paper py-1 text-center tabular-nums"
     />
+  );
+}
+
+/** Drag the panel's left edge to resize it; double-click resets. Arrow keys work too. */
+function ResizeHandle({ width, onResize }: { width: number; onResize: (width: number) => void }) {
+  const drag = useRef<{ x: number; width: number } | null>(null);
+  return (
+    <div
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize panel"
+      aria-valuenow={width}
+      tabIndex={0}
+      title="Drag to resize · double-click to reset"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        drag.current = { x: e.clientX, width };
+        document.body.style.userSelect = "none";
+      }}
+      onPointerMove={(e) => {
+        if (drag.current) onResize(drag.current.width + drag.current.x - e.clientX);
+      }}
+      onPointerUp={() => {
+        drag.current = null;
+        document.body.style.userSelect = "";
+      }}
+      onDoubleClick={() => onResize(PANEL_DEFAULT)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") onResize(width + 40);
+        if (e.key === "ArrowRight") onResize(width - 40);
+      }}
+      className="group absolute inset-y-0 -left-1.5 z-10 hidden w-3 cursor-col-resize md:block"
+    >
+      <div className="mx-auto h-full w-0.5 transition-colors group-hover:bg-accent/50 group-focus-visible:bg-accent group-active:bg-accent" />
+    </div>
   );
 }

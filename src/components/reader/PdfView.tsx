@@ -68,9 +68,17 @@ export const PdfView = forwardRef<PdfViewHandle, Props>(function PdfView(
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
-    const ro = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    // Debounced: dragging the panel edge resizes this every frame, and each change re-renders the pages.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const ro = new ResizeObserver(([entry]) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => setContainerWidth(entry.contentRect.width), 100);
+    });
     ro.observe(el);
-    return () => ro.disconnect();
+    return () => {
+      clearTimeout(timer);
+      ro.disconnect();
+    };
   }, []);
 
   const handleLoad = useCallback(
