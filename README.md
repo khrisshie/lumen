@@ -6,9 +6,10 @@ Open a paper, select anything, and ask, without copying text into a chatbot.
 ## Setup (3 steps)
 
 1. **Install [Node.js](https://nodejs.org)** (the LTS version).
-2. **Install Claude Code or Codex and log in once** in a terminal. Lumen uses your own account.
+2. **Install one AI tool and sign in once** in a terminal. Lumen uses your own account.
    - Claude Code ([install](https://claude.com/claude-code)): run `claude`, then type `/login`
    - Codex ([install](https://developers.openai.com/codex)): run `codex login`
+   - Gemini, via Google Antigravity ([install](https://antigravity.google)): run `agy` and sign in with Google
 3. **Download Lumen and open it:**
    - **Mac:** download [Lumen-mac.zip](https://github.com/khrisshie/lumen/releases/latest/download/Lumen-mac.zip),
      unzip it, and drag **Lumen.app** into your Applications folder. Open it; drag it to the Dock to keep it there.
@@ -38,7 +39,8 @@ npm install
 npm run dev                  # http://localhost:3000
 ```
 
-No API key needed: if `claude` (Claude Code) works in your terminal, Lumen uses it; otherwise it uses `codex` (Codex).
+No API key needed: Lumen uses the first of `claude` (Claude Code), `codex` (Codex) and `agy` (Antigravity, for Gemini)
+that's installed. To pick one, set `LUMEN_BACKEND=claude|codex|gemini` in `.env.local`.
 To use the Claude API instead, put `ANTHROPIC_API_KEY` in `.env.local` (see `.env.example`).
 
 ## Share it (portable copy)
@@ -48,7 +50,7 @@ npm run portable             # → dist/Lumen.zip (Mac + Windows scripts) and, o
 ```
 
 Send `dist/Lumen.zip`. Each person unzips it and double-clicks **Start Lumen (Mac).command** or
-**Start Lumen (Windows).bat**. They need Node.js 20+ and Claude Code or Codex, logged in with their own account
+**Start Lumen (Windows).bat**. They need Node.js 20+ and Claude Code, Codex or Antigravity (Gemini), signed in with their own account
 (`README.txt` inside the zip explains this).
 
 - The build goes to `.next-pack/` with `output: "standalone"`; your `.next`, dev server and `~/.lumen` aren't touched.
@@ -77,6 +79,14 @@ Send `dist/Lumen.zip`. Each person unzips it and double-clicks **Start Lumen (Ma
   as a stable prompt prefix. Summary and highlights use `--output-schema`; figures are attached with `-i`.
 - Codex reports whole messages, so answers appear at once instead of streaming.
 
+**Gemini via Antigravity** (`src/lib/backend/gemini.ts`, `LUMEN_BACKEND=gemini` or when only `agy` is installed)
+
+- Every request is one `agy -p --output-format stream-json` run that opens the PDF with Antigravity's `view_file` tool,
+  which reads PDFs natively, figures included. Captured figures are saved to a temp file and opened the same way.
+- Headless runs use Antigravity's default permission mode: reading files is allowed; commands and edits are denied.
+- Summary and highlights ask for a JSON reply and validate it with Zod (one retry).
+- Requests take ~15-35 s, since the paper is read on every request.
+
 **Claude API** (`src/lib/backend/api.ts`, used when `ANTHROPIC_API_KEY` is set)
 
 ## How it works
@@ -95,7 +105,7 @@ Send `dist/Lumen.zip`. Each person unzips it and double-clicks **Start Lumen (Ma
 src/
   app/api/{upload,ask,summary,highlights}/route.ts   thin routes over the active backend
   lib/prompts.ts     system prompt, task prompts, output schemas (shared by both backends)
-  lib/backend/       cli.ts (claude -p), codex.ts (codex exec), api.ts (Anthropic SDK), index.ts (picks one)
+  lib/backend/       cli.ts (claude -p), codex.ts (codex exec), gemini.ts (agy -p), api.ts (Anthropic SDK), index.ts (picks one)
   scripts/portable.mjs   builds the shareable zip
   lib/store.ts       IndexedDB library (papers + PDFs)
   lib/api.ts         browser API client (streaming, re-upload on missing file)

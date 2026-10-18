@@ -54,10 +54,11 @@ writeFileSync(
 # Double-click to start Lumen, then use it at http://localhost:${PORT}
 cd "$(dirname "$0")"
 
-# Lumen uses Claude Code if it's installed, otherwise Codex.
+# Lumen uses Claude Code if it's installed, otherwise Codex, otherwise Gemini (Antigravity).
 # To choose, remove the "#" in front of one line:
 # export LUMEN_BACKEND=claude
 # export LUMEN_BACKEND=codex
+# export LUMEN_BACKEND=gemini
 
 export LUMEN_DATA_DIR="$PWD/data" PORT=${PORT} HOSTNAME=127.0.0.1
 
@@ -80,10 +81,11 @@ writeFileSync(
 rem Double-click to start Lumen, then use it at http://localhost:${PORT}
 cd /d "%~dp0"
 
-rem Lumen uses Claude Code if it's installed, otherwise Codex.
+rem Lumen uses Claude Code if it's installed, otherwise Codex, otherwise Gemini (Antigravity).
 rem To choose, remove the "rem" in front of one line:
 rem set LUMEN_BACKEND=claude
 rem set LUMEN_BACKEND=codex
+rem set LUMEN_BACKEND=gemini
 
 set "LUMEN_DATA_DIR=%~dp0data"
 set PORT=${PORT}
@@ -108,9 +110,10 @@ writeFileSync(
 
 You need:
   1. Node.js 20 or newer: https://nodejs.org
-  2. Claude Code or Codex, installed and logged in:
+  2. Claude Code, Codex or Antigravity (for Gemini), installed and signed in:
      - Claude Code: https://claude.com/claude-code  then run \`claude\` and use /login
      - Codex: https://developers.openai.com/codex  then run \`codex login\`
+     - Antigravity: https://antigravity.google  then run \`agy\` and sign in with Google
 
 Start it:
   Mac: double-click "Start Lumen (Mac).command"
@@ -119,8 +122,8 @@ Start it:
   Your browser opens http://localhost:${PORT}. Close the terminal window to stop Lumen.
 
 Notes:
-  - AI features use your own Claude Code or Codex account.
-  - If both are installed, Lumen uses Claude Code. To choose, open the start file in a text editor and follow the comment.
+  - AI features use your own Claude Code, Codex or Google (Gemini) account.
+  - If several are installed, Lumen uses Claude Code first, then Codex, then Gemini. To choose, open the start file in a text editor and follow the comment.
   - Papers, notes and chats are kept in your browser; PDFs sent to the AI are kept in data/ in this folder.
   - Codex reads the PDF's text only; to ask about a figure, use "Figure" and drag a box over it.
   - Lumen only runs on your computer; nobody else on your network can reach it.
